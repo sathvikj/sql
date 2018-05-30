@@ -1,0 +1,4 @@
+select ceil(
+    avg(salary)-
+    avg(cast(replace(salary,0,'') as unsigned))
+           ) from employees
