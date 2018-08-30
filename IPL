@@ -1,0 +1,23 @@
+# What are the scores of Virat Kohli whenever RCB reached finals
+print season, name and Runs by Kohli
+
+SELECT m.season,d.batsman,sum(d.batsman_runs) as Runs from matches m
+join deliveries d on d.match_id = m.id
+where d.batsman like "%V kohli%" and m.id in (select max(id) from matches
+group by season)
+group by 1,2
+
+#Summarize the Winners and Runners by season
+
+# Contribution as pairs( Partnership ):
+
+create view pairs as (select batsman,non_striker,batting_team, sum(batsman_runs) as runs from deliveries
+group by 1,2,3);
+
+select p1.batsman,p1.non_striker,p1.batting_team,p1.runs+p2.runs as runs  from pairs p1
+join pairs p2 on p1.batsman = p2.non_striker and p1.non_striker = p2.batsman
+where p1.batsman<p2.batsman
+group by 1,2
+order by 4 desc;
+
+drop view pairs;
