@@ -1,0 +1,277 @@
+-- Questions are available at the link below
+   https://www.richardtwatson.com/dm6e/Reader/ClassicModels.html
+-- Section 1 Single Entity
+#1 select country , state , city from offices order by country , state , city;
+
+#2 select count(*) as numberofemployess from employees;
+
+#3 select sum(amount) as TotalPayment from payments;
+
+#4 select * from productlines where productLine LIKE '%Cars%';
+
+#5 select sum(amount) as paymentsforOct28 from payments where paymentDate = '2004-10-28';
+
+#6 select * from payments where amount > 100000;
+
+#7 select productLine ,productName, productDescription from products order by productLine;
+
+#8 select productLine , count(1) as Eachproductlinecount from products group by productLine order by count(1);
+
+#9 select min(amount) as minpaymentrecieved from payments;
+
+#10 select * from payments where amount > 2 * (select avg(amount) from payments );
+
+#11 select avg((MSRP-buyprice)/buyprice)*100 from products;
+
+#12 select count(productCode) from products;
+
+#13 select customerName ,customerNumber, city from customers where salesRepEmployeeNumber is null;
+
+#14 select CONCAT(firstName ,' ', lastName) as VPorManagerName from employees where jobTitle like '%VP%' or '%Manager%'; 
+
+#15 - select * from orderdetails group by orderNumber having sum(quantityOrdered * priceEach) > 5000;
+
+-- One to Many Relationship
+
+#1 select cu.customerName , CONCAT(cu.firstName,' ',cu.lastName) as representative from customers cu,employees em 
+where cu.salesRepEmployeeNumber = em.employeeNumber; 
+
+
+
+#2 select sum(amount) as totalpaymentbyatelier_graphique from payments 
+inner join customers on payments.customerNumber=customers.customerNumber  where customerName='Atelier graphique';
+
+
+#3 select sum(amount) as totalpaymentbyday , paymentDate from payments group by paymentDate;
+
+#5 select customerName,customerNumber , sum(amount) as totalamountpayedbyeachcust from payments 
+   inner join customers on payments.customerNumber=customers.customerNumber 
+   group by payments.customerNumber;
+
+ 
+#6 select count(orderNumber) as totalordersbyherkku from customers 
+   inner join orders on orders.customerNumber=customers.customerNumber 
+   where customerName='Herkku Gifts';
+
+
+#7 select CONCAT(firstName,' ',lastName) as employeename from employees 
+   inner join offices on employees.officeCode=offices.officeCode 
+   where offices.city='Boston';
+
+
+#8 select customerName , amount from payments 
+   inner join customers on payments.customerNumber = customers.customerNumber 
+   having payments.amount > 100000 order by payments.amount DESC;
+
+#9 select sum(quantityOrdered*priceEach) as valueofonholdorders from orders,orderdetails where status='On Hold' and orders.orderNumber=orderdetails.orderNumber;
+
+#10 select customerName,customers.customerNumber,orders.orderNumber ,status, count(orders.orderNumber) as numberoforders from orders,customers where customers.customerNumber=orders.customerNumber and orders.status='On Hold' group by customers.customerNumber order by customerNumber;
+
+
+-- Regular Expressions 
+
+#1 select productName,productDescription from products where productName like '%Ford%';
+
+#2 select productName,productDescription from products where productName REGEXP '.*[Ss]hip$';
+ 
+#3 select country,count(*) as totalcustomers_in_d_n_s from customers where country='Denmark' or country='Norway' or country='Sweden'
+	group by 1;
+
+#4 select productName,productCode from products where productCode between 'S700_1000' and 'S700_1499';
+
+#5 select * from customers where customerName regexp '.*[0-9].*';
+
+#6 select concat(firstName,' ',lastName) as Employeename from employees where (firstName like '%Diane%' or '%Dianne%') or (lastName like '%Diane%' or '%Dianne%');
+
+#7 select productName from products where productName regexp '.*[Bb]oat.*' or productName regexp '.*[Ss]hip.*';
+
+#8 select * from products where productCode like 'S700%';
+
+#9 select * from employees where (firstName='Barry' or firstName ='Larry') ;
+
+#10 select * from employees where (firstName regexp '.*[^a-zA-Z].*') or  (lastName regexp '.*[^a-zA-Z].*');
+
+#11 select distinct(productVendor) from products where productVendor like '%Diecast'; 
+
+
+-- Many to Many relationship
+#1 select productName, orders.orderNumber , orderDate from  ((orderdetails inner join products on orderdetails.productCode=products.productCode) 
+   inner join orders on orderdetails.orderNumber=orders.orderNumber) 
+   order by orderDate;
+
+#2 select productName , orderDate , requiredDate , shippedDate , status from 
+   (( products inner join orderdetails on products.productCode=orderdetails.productCode) 
+   inner join orders on orderdetails.orderNumber=orders.orderNumber)  where productName='1940 Ford Pickup Truck';
+
+
+
+#3 select O_N , C_Num , C_Name,totalordervalue from 
+(select orders.orderNumber as O_N ,orders.customerNumber as C_Num, customerName as C_Name,sum(quantityOrdered*priceEach) as totalordervalue  
+ from orders , orderdetails,customers 
+ where orders.orderNumber=orderDetails.orderNumber and customers.customerNumber=orders.customerNumber 
+ group by orders.orderNumber,orders.customerNumber) as newt 
+ where totalordervalue > 25000;
+
+
+#5 select orders.orderNumber , productName from 
+( ( orders inner join orderdetails on orders.orderNumber = orderdetails.orderNumber ) 
+   inner join products on orderdetails.productCode = products.productCode) 
+   where ((orderdetails.priceEach) < products.MSRP );
+
+#6 select productName , buyPrice , priceEach from orderdetails 
+	inner join products on orderdetails.productCode = products.productCode 
+	where orderdetails.priceEach >= 2*products.buyPrice 
+	group by 1
+	order by 2 desc;
+
+
+#7 select productName, orderDate, dayname(orderDate) from (orders inner join orderdetails on orders.orderNumber=orderdetails.orderNumber ) 
+	inner join products on orderdetails.productCode=products.productCode 
+	where dayname(orderDate)='Monday'
+	group by productName
+
+#8 select productName,status,quantityInStock from (orders inner join orderdetails on orders.orderNumber=orderdetails.orderNumber) 
+   inner join products on orderdetails.productCode=products.productCode 
+   where status='On Hold'; 
+
+
+
+-- Correleated Subqueries
+
+#1 select concat(firstName,' ',lastName) as EmployeeName, 'Mary Patterson' as ReportsTo from employees as E 
+    where E.reportsTo = ( select employeeNumber from employees where employees.firstName='Mary' and employees.lastName='Patterson' );
+
+#2 SELECT paymentdate, amount FROM   payments AS p 
+	WHERE ( p.amount > 2 * (SELECT Avg(amount) FROM   payments WHERE  ( Month(paymentdate) = Month(p.paymentdate) AND Year(paymentdate) = Year(p.paymentdate) ))) 
+	ORDER  BY paymentdate;
+
+
+#3    select p3.productname,
+       p3.productline,
+       sum(round((p3.quantity_inhand*100)/p4.total,2)) percentage
+		from (SELECT p1.productname, 
+       p1.productline, 
+       round(( quantityinstock * buyprice ),2) quantity_inhand 
+       FROM   products  p1) p3,
+       (SELECT p2.productline, 
+       Round(sum(quantityinstock * buyprice), 2) total
+       FROM   products p2 
+       group by p2.productline) p4
+where p3.productline=p4.productline
+group by p3.productname,
+         p3.productline
+order by p3.productline,
+         percentage desc;
+
+#4 select t1.productname,t1.ordervalue,t2.totalordervaluefrom 
+( select distinct p.productname,
+        o_d.ordernumber,
+        o_d.quantityordered*priceeach ordervalue
+        from products p,
+        orderdetails o_d
+		where p.productcode=o_d.productcode)  t1,
+		(select count(distinct p.productname) numberofproducts,
+				sum(o_d.quantityordered*o_d.priceeach) totalordervalue,
+				o_d.ordernumber
+				from products p,
+					 orderdetails o_d
+				where p.productcode=o_d.productcode
+				group by o_d.ordernumber)  t2
+where t1.ordernumber=t2.ordernumber and t2.numberofproducts > 2 and t1.ordervalue > (t2.totalordervalue/2);
+
+-- General Queries
+#1 select concat(firstName,' ',lastName) as Employeename from employees where reportsTo is NULL;
+
+#2 select concat(firstName,' ',lastName) as Employeename, 'William Patterson' as ReportsTo from employees as E where E.reportsTo = ( select employeeNumber from employees where firstName='William' and lastName='Patterson');
+
+
+#3 SELECT distinct productname, 
+       customername 
+	FROM   (( orders 
+          INNER JOIN orderdetails 
+                  ON orders.ordernumber = orderdetails.ordernumber ) 
+        INNER JOIN products 
+                ON orderdetails.productcode = products.productcode) 
+       INNER JOIN customers 
+               ON orders.customernumber = customers.customernumber 
+WHERE  customername = 'Herkku Gifts';
+
+#4 select concat(firstName,' ',lastName) as salrepemployeename, (5*quantityOrdered*priceEach)/100 as commission from 
+	((orders inner join customers on orders.customerNumber=customers.customerNumber) inner join orderdetails on orders.orderNumber=orderdetails.orderNumber) 
+	 inner join employees on customers.salesRepEmployeeNumber=employees.employeeNumber 
+	 group by employeeNumber , lastname, firstname
+	 order by lastName,firstName;
+
+#5 select DATEDIFF(max(orderDate) , min(orderDate)) as numberofdays from orders;
+
+#6 select customerName , AVG(DATEDIFF(shippedDate,orderDate)*24) as avgorderdiffshipinginhours  from orders 
+	inner join customers on orders.customerNumber=customers.customerNumber 
+	group by customerName 
+	order by AVG(DATEDIFF(shippedDate,orderDate)*24) DESC;
+
+
+#7 select sum(quantityOrdered*priceEach) as valueofordersinaug2004 from orders 
+   inner join orderdetails on orders.orderNumber=orderdetails.orderNumber 
+   where (month(shippedDate)=8 and year(shippedDate)=2004);
+
+#8
+drop view if exists totalordered;
+create view totalordered as  select customerName,sum(quantityOrdered*priceEach) as totalordervalue from ((orders inner join orderdetails on orders.orderNumber=orderdetails.orderNumber) inner join customers on orders.customerNumber=customers.customerNumber) where year(orderDate)=2004 group by customerName order by customerName;
+drop view if exists totalpaid;
+create view totalpaid as select customerName, sum(amount) as totalpayedamount from payments inner join customers on payments.customerNumber=customers.customerNumber where year(paymentDate)=2004 group by customerName order by customerName;
+select  totalordered.customerName,totalordervalue , totalpayedamount , (round(totalordervalue,2)-round(totalpayedamount,2)) as differenceamongorderandpaid from totalordered left join totalpaid on totalordered.customerName=totalpaid.customerName;
+	 Using Join
+select t1.customerName,t1.totalordervalue,t2.totalpayedamount,t1.totalordervalue-t2.totalpayedamount as diffamount
+from (SELECT customername, 
+       Sum(quantityordered * priceeach) AS totalordervalue 
+FROM   ((orders 
+         INNER JOIN orderdetails 
+                 ON orders.ordernumber = orderdetails.ordernumber) 
+        INNER JOIN customers 
+                ON orders.customernumber = customers.customernumber) 
+WHERE  Year(orderdate) = 2004 
+GROUP  BY customername 
+ORDER  BY customername) as t1
+inner join (SELECT customername, 
+       Sum(amount) AS totalpayedamount 
+FROM   payments 
+       INNER JOIN customers 
+               ON payments.customernumber = customers.customernumber 
+WHERE  Year(paymentdate) = 2004 
+GROUP  BY customername 
+ORDER  BY customername) as t2
+on t1.customerName=t2.customerName;
+
+#9
+select concat(firstName,' ',lastName) as EmployeeName from employees
+where reportsTo = ( select employeeNumber from employees where firstName='Diane' and lastName='Murphy' ) );
+
+#10 
+select productName , (quantityInStock* buyPrice*100)/(select sum(quantityInStock*buyPrice) from products ) as percentage from products as p 
+order by (quantityInStock* buyPrice*100)/(select sum(quantityInStock*buyPrice) from products ) DESC;
+ 
+#15
+select  round(sum(quantityOrdered*priceEach),2) as totalordervalue from orders 
+inner join orderdetails on orders.orderNumber=orderdetails.orderNumber 
+where year(shippedDate)=2004 and month(shippedDate)=8;
+
+
+#16
+select t1.orderDate,t1.oamount,t2.pamount,t2.pamount/t1.oamount as ratio
+	from (select o.orderDate, sum(o_d.quantityOrdered*o_d.priceEach) as oamount
+	from Orders as o ,orderdetails as o_d
+	where year(o.orderDate)=2004 and o.orderNumber=o_d.orderNumber
+	group by month(o.orderDate)
+	) as t1 inner join (select p.paymentDate, sum(p.amount) as pamount
+	from payments as p
+	where year(p.paymentDate)=2004
+	group by month(p.paymentDate)) as t2
+	on month(t1.orderDate)=month(t2.paymentDate);
+#17
+select customerName,customerNumber from customers 
+where customerNumber IN (
+						select orders.customerNumber from 
+						(select orderNumber , sum(quantityOrdered*priceEach) as ordervalue from orderdetails group by orderNumber) as newtable,orders 
+						where newtable.orderNumber=orders.orderNumber and ordervalue > 10000  
+						group by orders.customerNumber having count(orders.orderNumber) > 3 order by customerNumber);
+
