@@ -1,4 +1,4 @@
-                                                              # SQL Queries
+#                                                            SQL Queries
 
 # Classic Models
    These are the practice questions that I did when learning sql for the first time. Solutions doesn't include functions and stored    
