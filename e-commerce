@@ -1,0 +1,507 @@
+/* Query working for all orders, products, online, Cash on Delivery and Courier stats for Hyderabad and Non Hyderabad*/
+SELECT MIN(o.date_added) AS date_start, MAX(o.date_added) AS date_end, COUNT(*) AS `orders`, 
+SUM((SELECT SUM(op.quantity) FROM `oc_order_product` op WHERE op.order_id = o.order_id GROUP BY op.order_id)) AS products, 
+SUM(IF(((payment_postcode LIKE '500%' OR payment_postcode LIKE '501%' OR payment_postcode LIKE '502%') AND lower(payment_city) LIKE 'hyd%'),1,0))*30 as hyd_orders, 
+SUM(IF(NOT((payment_postcode LIKE '500%' OR payment_postcode LIKE '501%' OR payment_postcode LIKE '502%') AND lower(payment_city) LIKE 'hyd%'),1,0))*80 as nonhyd_orders,
+SUM(IF(payment_code='payu',1,0)) as online_orders, SUM(IF(payment_code='payu',total,0)) as online_trans, 
+SUM(IF(payment_code='cod',1,0)) as cod_orders, SUM(IF(payment_code='cod',total,0)) as cod_trans,
+SUM((SELECT SUM(ot.value) FROM `oc_order_total` ot WHERE ot.order_id = o.order_id AND ot.code = 'tax' GROUP BY ot.order_id)) AS tax, 
+SUM(o.total) AS `total` FROM `oc_order` o 
+WHERE (o.order_status_id in(15,3,18,4,5,33,19) AND o.date_added LIKE '%2016-02-%' 
+GROUP BY YEAR(o.date_added), MONTH(o.date_added), DAY (o.date_added)
+
+/*Query for shipping charges by Movie*/
+SELECT MIN(o.date_added) AS date_start, MAX(o.date_added) AS date_end, COUNT(*) AS `orders`, 
+SUM((SELECT SUM(op.quantity) FROM `oc_order_product` op WHERE op.order_id = o.order_id  GROUP BY op.order_id)) AS products, 
+SUM(IF(((payment_postcode LIKE '500%' OR payment_postcode LIKE '501%' OR payment_postcode LIKE '502%') AND lower(payment_city) LIKE 'hyd%'),1,0))*30 as hyd_orders, 
+SUM(IF(NOT((payment_postcode LIKE '500%' OR payment_postcode LIKE '501%' OR payment_postcode LIKE '502%') AND lower(payment_city) LIKE 'hyd%'),1,0))*80 as nonhyd_orders,
+SUM((SELECT SUM(ot.value) FROM `oc_order_total` ot WHERE ot.order_id = o.order_id AND ot.code = 'tax' GROUP BY ot.order_id)) AS tax FROM `oc_order` o 
+JOIN `oc_order_product` op ON o.order_id=op.order_id WHERE (
+o.order_status_id in(3,4,5,15,17,18,26,33) AND op.product_id BETWEEN 104 AND 116 AND DATE(o.date_modified)<='2016-02-29'
+
+/* Query for Cost of goods sold */
+SELECT SUM(p.cost*der.prod) as final
+FROM `oc_product` p
+RIGHT JOIN (SELECT op.product_id, SUM(op.quantity) as prod
+FROM `oc_order` o
+INNER JOIN `oc_order_product` op ON o.order_id = op.order_id
+WHERE (o.date_added LIKE '%2016-02-21%')
+AND (o.order_status_id in (15,18,4,5,33,3)
+GROUP BY op.product_id) as der
+ON p.product_id = der.product_id
+
+
+/* Voucher Claims */
+SELECT o.date_added, SUM( ot.value )
+FROM `oc_order` o
+INNER JOIN `oc_order_total` ot ON o.order_id = ot.order_id
+WHERE (ot.code = 'coupon' OR ot.code = 'reward') AND (o.order_status_id in (15,18,4,5,33,3)
+GROUP BY DATE( o.date_added ) 
+
+/* Coupon claims for each product (weighted average) */
+SELECT C.date_added AS DATE_ORDERED,D.model AS PRODUCT_NAME,D.product_id AS PRODUCT_CODE,
+C.order_id AS ORDER_ID,C.order_status_id,D.order_product_id AS ORDER_PRODUCT_ID,ROUND(D.total,2) AS GROSS_TOTAL,
+ROUND(0-(D.total*IFNULL(E.amount, 0)/(C.total-IFNULL(E.amount, 0))),2) AS COUPON_AMOUNT,
+ROUND(D.total+(D.total*IFNULL(E.amount, 0)/(C.total-IFNULL(E.amount, 0))),2) AS NET_TOTAL 
+FROM `oc_order` C 
+JOIN `oc_order_product` D ON C.order_id=D.order_id 
+LEFT JOIN `oc_coupon_history` E ON C.order_id=E.order_id 
+WHERE (C.order_status_id in (3,4,5,15,17,18,26,33) AND D.product_id BETWEEN 145 AND 154
+
+/*ProductWise Stats including coupon amounts*/
+
+SELECT C.date_added AS DATE_ORDERED,D.model AS PRODUCT_NAME,D.product_id AS PRODUCT_CODE,
+D.price as price,SUM(D.quantity) as Product_count, SUM(ROUND(D.total,2)) AS GROSS_TOTAL,
+SUM(ROUND(0-(D.total*IFNULL(E.amount, 0)/(C.total-IFNULL(E.amount, 0))),2)) AS COUPON_AMOUNT,
+SUM(ROUND(D.total+(D.total*IFNULL(E.amount, 0)/(C.total-IFNULL(E.amount, 0))),2)) AS NET_TOTAL 
+FROM `oc_order` C 
+JOIN `oc_order_product` D ON C.order_id=D.order_id 
+LEFT JOIN `oc_coupon_history` E ON C.order_id=E.order_id 
+WHERE C.order_status_id >0 AND D.product_id BETWEEN 155 AND 185 
+GROUP BY D.product_id
+
+SELECT D.model AS PRODUCT_NAME,C.payment_code as Payment_type, D.price as price,SUM(D.quantity) as Product_count, 
+SUM(ROUND(D.total,2)) AS GROSS_TOTAL,SUM(ROUND(0-(D.total*IFNULL(E.amount, 0)/(C.total-IFNULL(E.amount, 0))),2)) AS COUPON_AMOUNT,
+SUM(ROUND(D.total+(D.total*IFNULL(E.amount, 0)/(C.total-IFNULL(E.amount, 0))),2)) AS NET_TOTAL 
+FROM `oc_order` C 
+JOIN `oc_order_product` D ON C.order_id=D.order_id 
+LEFT JOIN `oc_coupon_history` E ON C.order_id=E.order_id 
+WHERE C.order_status_id IN (3,4,15,18) AND D.product_id BETWEEN 155 AND 185 
+GROUP BY D.product_id,C.payment_code
+
+
+/* ProductWise monthly stats */
+SELECT * FROM (SELECT p.model, pd.design_desc, p.product_id,p.quantity as opencart_num
+FROM `oc_product` p
+INNER JOIN `oc_product_description` pd ON p.product_id = pd.product_id
+WHERE p.status =1 ) as prod_details 
+LEFT JOIN (SELECT op.product_id, SUM(op.quantity) as order_accepted_not_shipped
+FROM `oc_order` o
+INNER JOIN `oc_order_product` op
+ON o.order_id=op.order_id WHERE (o.order_status_id=15 or o.order_status_id=3 or o.order_status_id=18 or o.order_status_id=4 or o.order_status_id=5 or o.order_status_id=26 or o.order_status_id=33) AND DATE(o.date_added)='2016-01-02' GROUP BY op.product_id) as req_details
+ON prod_details.product_id=req_details.product_id
+ORDER BY `req_details`.`product_id`  DESC
+
+
+/* Query for Business done till now based on catgeory */
+SELECT op.product_id, p.model, ptc.category_id, count(*) as orders,SUM( op.quantity) , 
+sum( op.total ) , SUM(p.cost*op.quantity) as COG,MIN( o.date_added ) AS date_start, MAX( o.date_added ) AS date_end
+FROM `oc_order` o
+JOIN `oc_order_product` op ON o.order_id = op.order_id
+JOIN `oc_product` p ON op.product_id = p.product_id
+JOIN `oc_product_to_category` ptc ON p.product_id = ptc.product_id
+WHERE (o.order_status_id in (3,4,5,15,17,18,26,33)
+AND DATE( o.date_added ) > '2015-04-01'
+AND ptc.category_id =115
+GROUP BY op.product_id
+WITH ROLLUP
+
+/* For Report Movie wise */
+SELECT op.product_id, p.model, ptc.category_id, 
+count(*) as orders,SUM( op.quantity) ,o.payment_code, sum( op.total ) , 
+SUM(p.cost*op.quantity) as COG,MIN( o.date_added ) AS date_start, MAX( o.date_added ) AS date_end
+FROM `oc_order` o
+JOIN `oc_order_product` op ON o.order_id = op.order_id
+JOIN `oc_product` p ON op.product_id = p.product_id
+JOIN `oc_product_to_category` ptc ON p.product_id = ptc.product_id
+WHERE o.order_status_id in (3,4,5,15,17,18,26,33)
+AND DATE( o.date_added ) > '2015-04-01'
+AND DATE( o.date_modified ) <= '2016-02-29'
+AND ptc.category_id =115 AND o.payment_code='payu'
+GROUP BY op.product_id
+WITH ROLLUP
+
+/*For returns - COD cost should be only on returned products not refused AND it is 50 rs for each */
+SELECT op.product_id, p.model, ptc.category_id, count(*) as orders,SUM( op.quantity) , sum( op.total ) , SUM(p.cost*op.quantity) as COG,MIN( o.date_added ) AS date_start, MAX( o.date_added ) AS date_end
+FROM `oc_order` o
+JOIN `oc_order_product` op ON o.order_id = op.order_id
+JOIN `oc_product` p ON op.product_id = p.product_id
+JOIN `oc_product_to_category` ptc ON p.product_id = ptc.product_id
+WHERE o.order_status_id in (20,19,21,22,23,24,25,26,27)
+AND DATE( o.date_added ) > '2015-04-01'
+AND ptc.category_id =101
+GROUP BY op.product_id
+WITH ROLLUP
+
+/* Orders from referred by customers */
+SELECT vouchers.order_id,vouchers.code,vouchers.value,vouchers.customer_id,vouchers.date_added,c.referredby 
+FROM (SELECT o.order_id,ot.code,ot.value,o.customer_id,o.date_added FROM `oc_order` o
+	  INNER JOIN `oc_order_total` ot ON o.order_id = ot.order_id
+	  WHERE o.order_status_id=15 AND o.customer_id>0) as vouchers 
+INNER JOIN `oc_customer` c ON vouchers.customer_id=c.customer_id 
+WHERE c.referredby<>'NULL' AND c.referredby IS NOT NULL AND c.referredby<>''
+
+/* Inventory statistics */
+SELECT p.model, pd.design_desc, p.quantity
+FROM `oc_product` p
+INNER JOIN `oc_product_description` pd ON p.product_id = pd.product_id
+WHERE p.status =1
+
+/* Setting rewards after the referral order delivers */
+SELECT *
+FROM `oc_order`
+WHERE order_status_id =18
+AND DATE( '2015-03-05 11:49:04' ) - DATE( date_modified ) <7
+AND DATE( o.date_added ) > "2014-10-07"
+
+
+SELECT c.customer_id, c.referal, c.referredby, c.firstname, o.date_added, o.date_modified
+FROM `oc_order` o
+INNER JOIN `oc_customer` c ON c.customer_id = o.customer_id
+WHERE o.order_status_id =18
+
+/* Query for Getting Accepted orders and product quantities */
+SELECT * FROM (SELECT p.model, pd.design_desc, p.product_id,p.quantity as opencart_num
+FROM `oc_product` p
+INNER JOIN `oc_product_description` pd ON p.product_id = pd.product_id
+WHERE p.status =1 ) as prod_details 
+LEFT JOIN (SELECT op.product_id, SUM(op.quantity) as order_accepted_not_shipped
+FROM `oc_order` o
+INNER JOIN `oc_order_product` op
+ON o.order_id=op.order_id WHERE (o.order_status_id=15) GROUP BY op.product_id) as req_details
+ON prod_details.product_id=req_details.product_id
+ORDER BY `prod_details`.`product_id` ASC
+
+
+/* Query for getting sold products by size and their descriptions */
+SELECT all_descrip.product_id,all_descrip.model,all_descrip.design_desc,all_descrip.opencart_num, size_trans.SIZE, size_trans.SALE FROM 
+   (SELECT p.model, pd.design_desc, p.product_id,p.quantity as opencart_num
+	FROM `oc_product` p
+	INNER JOIN `oc_product_description` pd ON p.product_id = pd.product_id
+WHERE p.status =1) as all_descrip LEFT JOIN 
+  (SELECT a.model, a.product_id AS PRODUCT_ID, b.value AS SIZE, SUM( a.quantity ) AS SALE
+	FROM oc_order_product a
+	JOIN oc_order_option b ON a.order_product_id = b.order_product_id
+	JOIN oc_order c ON b.order_id = c.order_id
+WHERE c.order_status_id =15
+GROUP BY a.product_id, b.value
+WITH ROLLUP) as size_trans
+ON all_descrip.product_id=size_trans.PRODUCT_ID
+ORDER BY `all_descrip`.`model` ASC
+
+
+
+/* Query for getting S quantity of in hand products */
+SELECT *, 
+(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=32) as in_hand_s,
+(SELECT SUM(op.quantity) FROM `oc_order_product` op, `oc_order` o WHERE op.product_id = p.product_id AND op.order_id = o.order_id AND o.order_status_id > 0) AS sold 
+FROM `oc_product` p 
+LEFT JOIN `oc_product_description` pd ON (p.product_id = pd.product_id) 
+WHERE pd.language_id = '1' GROUP BY p.product_id
+
+/* Query for getting S quantity of in_hand and in_reserve products */
+SELECT *, 
+(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=32) as in_hand_s,
+(SELECT SUM( a.quantity ) FROM `oc_order_product` a JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id JOIN `oc_order` c ON b.order_id = c.order_id 
+WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='S') as in_reserve_s,
+(SELECT SUM(op.quantity) FROM `oc_order_product` op, `oc_order` o WHERE op.product_id = p.product_id AND op.order_id = o.order_id AND o.order_status_id > 0) AS sold 
+FROM `oc_product` p 
+LEFT JOIN `oc_product_description` pd ON (p.product_id = pd.product_id) 
+WHERE pd.language_id = '1' GROUP BY p.product_id
+
+
+/* Query for admin products */
+SELECT *, 
+(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=32) as in_hand_s,
+(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=31) as in_hand_m,
+(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=43) as in_hand_l,
+(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=49) as in_hand_xl,
+(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=50) as in_hand_xxl,
+(SELECT SUM( a.quantity ) 
+FROM `oc_order_product` a 
+JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id 
+JOIN `oc_order` c ON b.order_id = c.order_id 
+WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='S') as in_reserve_s,
+(SELECT SUM( a.quantity ) FROM `oc_order_product` a 
+JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id 
+JOIN `oc_order` c ON b.order_id = c.order_id WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='M') as in_reserve_m,
+(SELECT SUM( a.quantity ) FROM `oc_order_product` a 
+JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id 
+JOIN `oc_order` c ON b.order_id = c.order_id 
+WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='L') as in_reserve_L,
+(SELECT SUM( a.quantity ) FROM `oc_order_product` a JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id JOIN `oc_order` c ON b.order_id = c.order_id WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='XL') as in_reserve_xl,(SELECT SUM( a.quantity ) FROM `oc_order_product` a JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id JOIN `oc_order` c ON b.order_id = c.order_id WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='XXL') as in_reserve_xxl,(SELECT SUM(op.quantity) FROM `oc_order_product` op, `oc_order` o WHERE op.product_id = p.product_id AND op.order_id = o.order_id AND o.order_status_id = 15) AS in_reserver_total,(SELECT SUM(op.quantity) FROM `oc_order_product` op, `oc_order` o WHERE op.product_id = p.product_id AND op.order_id = o.order_id AND o.order_status_id > 0) AS sold FROM `oc_product` p LEFT JOIN `oc_product_description` pd ON (p.product_id = pd.product_id) WHERE pd.language_id = '1' GROUP BY p.product_id
+
+
+/* Query for getting abandon Cart orders and Product details */
+SELECT DISTINCT o.order_id,o.email,op.product_id,oo.value FROM `oc_order` o 
+JOIN `oc_order_product` op ON o.order_id=op.order_id 
+JOIN `oc_order_option` oo ON oo.order_product_id=op.order_product_id WHERE o.order_status_id=0 
+GROUP BY o.email, op.product_id
+
+/* Query for converting date form detail_ref_id */
+SELECT * , STR_TO_DATE( LEFT( DATETIME, 11 ) , '%d %b %Y' ) AS perfectDate
+FROM `oc_detail_ref_id`
+ORDER BY `perfectDate` DESC
+LIMIT 0 , 30
+
+
+
+
+SELECT COUNT(*), SUM(o.total) FROM `oc_order` o WHERE o.order_id IN (SELECT drf.REFNO FROM `oc_detail_ref_id` drf WHERE drf.STATUS NOT LIKE 'Delivered%' AND drf.STATUS NOT LIKE 'RTO Delivered%' AND drf.DATETIME LIKE '%Sep%' AND drf.REFNO NOT LIKE 'L%') 
+
+SELECT MIN(o.date_added) AS date_start, MAX(o.date_added) AS date_end, COUNT(*) AS `orders`, SUM((SELECT SUM(op.quantity) FROM `oc_order_product` op WHERE op.order_id = o.order_id GROUP BY op.order_id)) AS products,SUM(IF(payment_code='payu',1,0)) as online_orders, SUM(IF(payment_code='payu',total,0)) as online_trans, SUM(IF(payment_code='cod',1,0)) as cod_orders, SUM(IF(payment_code='cod',total,0)) as cod_trans, SUM((SELECT SUM(ot.value) FROM `oc_order_total` ot WHERE ot.order_id = o.order_id AND ot.code = 'tax' GROUP BY ot.order_id)) AS tax, SUM(o.total) AS `total` FROM `oc_order` o WHERE o.order_status_id=3 AND DATE(o.date_added)>="2015-08-01" AND DATE(o.date_added)<="2015-08-31" AND DATE(o.date_modified)>="2015-08-01" AND DATE(o.date_modified)<="2015-08-31" GROUP BY YEAR(o.date_modified), MONTH(o.date_modified)
+
+SELECT MIN( o.date_added ) AS date_start, MAX( o.date_added ) AS date_end, COUNT( * ) AS `orders` , SUM( (
+
+SELECT SUM( op.quantity )
+FROM `oc_order_product` op
+WHERE op.order_id = o.order_id
+GROUP BY op.order_id )
+) AS products, SUM( IF( payment_code = 'payu', 1, 0 ) ) AS online_orders, SUM( IF( payment_code = 'payu', total, 0 ) ) AS online_trans, SUM( IF( payment_code = 'cod', 1, 0 ) ) AS cod_orders, SUM( IF( payment_code = 'cod', total, 0 ) ) AS cod_trans, SUM( (
+
+SELECT SUM( ot.value )
+FROM `oc_order_total` ot
+WHERE ot.order_id = o.order_id
+AND ot.code = 'tax'
+GROUP BY ot.order_id )
+) AS tax, SUM( o.total ) AS `total`
+FROM `oc_order` o
+WHERE o.order_status_id <>15
+AND o.order_status_id >0
+AND o.order_status_id <>3
+AND DATE( o.date_added ) >= "2015-08-01"
+AND DATE( o.date_added ) <= "2015-08-31"
+AND DATE( o.date_modified ) >= "2015-08-01"
+AND DATE( o.date_modified ) <= "2015-08-31"
+GROUP BY YEAR( o.date_modified ) , MONTH( o.date_modified )
+
+
+
+
+SELECT MIN( o.date_modified ) AS date_start, MAX( o.date_modified ) AS date_end, COUNT( * ) AS `orders` , SUM( (
+
+SELECT SUM( op.quantity )
+FROM `oc_order_product` op
+WHERE op.order_id = o.order_id
+GROUP BY op.order_id )
+) AS products, SUM( IF( payment_code = 'payu', 1, 0 ) ) AS online_orders, SUM( IF( payment_code = 'payu', total, 0 ) ) AS online_trans, SUM( IF( payment_code = 'cod', 1, 0 ) ) AS cod_orders, SUM( IF( payment_code = 'cod', total, 0 ) ) AS cod_trans, SUM( (
+
+SELECT SUM( ot.value )
+FROM `oc_order_total` ot
+WHERE ot.order_id = o.order_id
+AND ot.code = 'tax'
+GROUP BY ot.order_id )
+) AS tax, SUM( o.total ) AS `total`
+FROM `oc_order` o
+WHERE o.order_status_id <>15
+AND o.order_status_id >0
+AND o.order_status_id <>3
+AND DATE( o.date_modified ) >= "2015-09-01"
+AND DATE( o.date_modified ) <= "2015-09-30"
+GROUP BY YEAR( o.date_modified ) , MONTH( o.date_modified )
+
+
+SELECT * FROM `oc_detail_ref_id` WHERE STATUS LIKE 'RTO Delivered%' AND DATETIME LIKE '%Sep%' AND REFNO NOT IN (SELECT order_id FROM `oc_order` WHERE order_status_id<>3 AND order_status_id<>15 AND order_status_id>0)
+
+/*Query to replace white spaces of a column */
+UPDATE  `oc_temp_ref_id` SET REFID = TRIM( REPLACE( REPLACE( REPLACE( REFID,  '\t',  '' ) ,  '\n',  '' ) ,  '\r',  '' ) )
+
+/* Query for movieX Stats */
+SELECT o.order_status_id, op.product_id, p.model, COUNT( * ) 
+FROM  `oc_order_product` op
+JOIN  `oc_order` o ON o.order_id = op.order_id
+JOIN  `oc_product` p ON op.product_id = p.product_id
+WHERE o.order_status_id <>0
+AND op.product_id >=104
+AND op.product_id <=116
+GROUP BY op.product_id, o.order_status_id
+
+######
+SELECT op.product_id,COUNT(*) FROM `oc_order_product` op 
+JOIN `oc_order` o ON o.order_id=op.order_id 
+JOIN `oc_detail_ref_id` dri ON o.order_id=dri.REFNO WHERE dri.STATUS LIKE 'Delivered%' AND op.product_id>=104 and op.product_id<=114 
+GROUP BY op.product_id
+
+
+/* Query for returns not updated automatically */
+SELECT * FROM `oc_detail_ref_id` drf 
+JOIN `oc_order` o ON drf.REFNO=o.order_id 
+WHERE o.order_status_id<>3 AND o.order_status_id<>18 AND o.order_status_id<>15 AND o.order_status_id>0 
+      AND invoice_prefix NOT LIKE '%CLP-INV%' 
+	  AND STR_TO_DATE(LEFT(drf.DATETIME,23),'%d %b %Y & %h:%i%p') <> o.date_modified 
+
+/* Query for returns not updated automatically product wise */
+SELECT op.product_id,COUNT(*) FROM `oc_detail_ref_id` drf 
+JOIN `oc_order` o ON drf.REFNO=o.order_id 
+JOIN `oc_order_product` op ON o.order_id=op.order_id 
+WHERE o.order_status_id>=20 AND o.invoice_prefix NOT LIKE '%CLP-INV%' 
+		AND STR_TO_DATE(LEFT(drf.DATETIME,23),'%d %b %Y & %h:%i%p') <> o.date_modified 
+GROUP BY op.product_id
+
+
+/* Query for sales report after April product wise orders received */
+SELECT op.product_id, p.model, count( * ) , sum( op.total ) , MIN( o.date_added ) AS date_start, MAX( o.date_added ) AS date_end
+FROM `oc_order` o
+JOIN `oc_order_product` op ON o.order_id = op.order_id
+JOIN `oc_product` p ON op.product_id = p.product_id
+WHERE o.order_status_id >0
+AND DATE( o.date_added ) > '2015-04-01'
+GROUP BY op.product_id, YEAR( o.date_added ) , MONTH( o.date_added )  
+
+/* Query for sales report after April product wise orders delivered */
+SELECT op.product_id,p.model, count( * ) , sum( op.total ) , MIN( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) AS date_start, MAX( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) AS date_end
+FROM `oc_order` o
+JOIN `oc_order_product` op ON o.order_id = op.order_id
+JOIN `oc_detail_ref_id` drf ON drf.REFNO = o.order_id
+JOIN `oc_product` p ON p.product_id=op.product_id
+WHERE drf.STATUS LIKE 'Delivered%'
+GROUP BY op.product_id, YEAR( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) , MONTH( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) 
+
+/* Query for sales report after April product wise orders unknown */
+SELECT op.product_id,p.model, count( * ) , sum( op.total ) , MIN( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) AS date_start, MAX( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) AS date_end
+FROM `oc_order` o
+JOIN `oc_order_product` op ON o.order_id = op.order_id
+JOIN `oc_detail_ref_id` drf ON drf.REFNO = o.order_id
+JOIN `oc_product` p ON p.product_id=op.product_id
+WHERE drf.STATUS LIKE '%unknown%'
+GROUP BY op.product_id, YEAR( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) , MONTH( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) )
+
+/* Query for Payment gateway Transactions */
+SELECT MIN( date_added ) , MAX( date_added ) , COUNT( * ) , SUM( total )
+FROM `oc_order`
+WHERE payment_code = 'payu'
+AND order_status_id >0 and order_status_id<20
+GROUP BY YEAR( date_added ) , MONTH( date_added ) 
+
+/* Query for cash on delivery realisation */
+SELECT MIN(STR_TO_DATE(LEFT(drf.DATETIME,11),'%d %b %Y')) AS date_start, MAX(STR_TO_DATE(LEFT(drf.DATETIME,11),'%d %b %Y')) AS date_end,o.payment_code, COunt(*), SUM(o.total) FROM `oc_order` o JOIN `oc_detail_ref_id` drf ON drf.REFNO=o.order_id WHERE drf.STATUS LIKE 'Delivered%' AND o.payment_code='cod' GROUP BY YEAR( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) , MONTH( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) 
+
+SELECT MIN(STR_TO_DATE(LEFT(drf.DATETIME,11),'%d %b %Y')) AS date_start, MAX(STR_TO_DATE(LEFT(drf.DATETIME,11),'%d %b %Y')) AS date_end,o.payment_code, COunt(*), SUM(o.total) FROM `oc_order` o JOIN `oc_detail_ref_id` drf ON drf.REFNO=o.order_id WHERE drf.STATUS LIKE 'Delivered%' AND o.payment_code='cod' AND STR_TO_DATE(LEFT(drf.DATETIME,11),'%d %b %Y')<='2015-10-15' GROUP BY YEAR( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) , MONTH( STR_TO_DATE( LEFT( drf.DATETIME, 11 ) , '%d %b %Y' ) ) 
+
+
+SELECT DISTINCT o.order_id
+FROM `oc_detail_ref_id` drf
+JOIN `oc_order` o ON drf.REFNO = o.order_id
+WHERE drf.STATUS LIKE 'Delivered%'
+AND drf.DATETIME LIKE '%Oct%'
+
+SELECT *,SUM(vsi.accepted_quantity) as sum_accepted FROM  `vendor_shipments` vs JOIN `vendor_shipment_items` vsi ON vsi.vendor_shipment_id=vs.vendor_shipment_id GROUP BY vs.po_id,vsi.product_option_value_id
+
+SELECT *,SUM(vsi.accepted_quantity) FROM `pos` p JOIN `po_items` pi ON p.po_id=pi.po_id JOIN `vendor_shipments` vs ON vs.po_id=p.po_id JOIN `vendor_shipment_items` vsi ON vsi.vendor_shipment_id=vs.vendor_shipment_id GROUP BY p.po_id,vsi.product_option_value_id,pi.product_option_value_id
+
+SELECT *,sum(pi.quantity-ship_table.sum_accepted) as remaining FROM (SELECT vs.po_id,vsi.product_option_value_id,SUM(vsi.accepted_quantity) as sum_accepted FROM  `vendor_shipments` vs JOIN `vendor_shipment_items` vsi ON vsi.vendor_shipment_id=vs.vendor_shipment_id GROUP BY vs.po_id,vsi.product_option_value_id) as ship_table JOIN `po_items` pi ON pi.po_id=ship_table.po_id AND pi.product_option_value_id=ship_table.product_option_value_id GROUP BY pi.po_id
+
+SELECT * FROM `oc_order` o JOIN `oc_order_product` op ON o.order_id=op.order_id WHERE o.order_status_id=15 AND DATE(o.date_added) > '2015-11-01'
+
+
+SELECT o.order_id, o.customer_id, o.firstname, o.lastname, o.email, o.telephone, o.payment_address_1, o.payment_city, o.payment_postcode, o.payment_country, o.payment_code, o.total, op.order_product_id, op.model, oo.value, oo.product_option_value_id, o.order_status_id, op.quantity, op.price, op.total,o.date_added,o.date_modified FROM `oc_order` o JOIN `oc_order_option` oo ON o.order_id=oo.order_id JOIN `oc_order_product` op ON oo.order_product_id=op.order_product_id WHERE o.order_status_id=15 AND oo.product_option_value_id IN (SELECT pov.product_option_value_id FROM `oc_product_option_value` pov WHERE pov.quantity>0) ORDER BY o.order_id DESC
+
+SELECT count(DISTINCT o.order_id) FROM `oc_order` o JOIN `oc_order_option` oo ON o.order_id=oo.order_id JOIN `oc_order_product` op ON oo.order_product_id=op.order_product_id WHERE o.order_status_id=15 AND oo.product_option_value_id IN (SELECT pov.product_option_value_id FROM `oc_product_option_value` pov WHERE pov.quantity>0)
+
+Updating order_status in order_product
+UPDATE `oc_order_product` op, `oc_order` o SET op.status_id=o.order_status_id WHERE op.order_id=o.order_id
+
+
+UPDATE my_table SET entity_uid = substring(MD5(RAND()) FROM 1 FOR 36);
+
+SELECT *,(SELECT SUM(b.quantity) FROM `oc_product_option_value` b WHERE b.product_id = p.product_id) as in_hand_total,(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=32) as in_hand_s,(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=31) as in_hand_m,(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=43) as in_hand_l,(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=49) as in_hand_xl,(SELECT b.quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=50) as in_hand_xxl,(SELECT SUM(b.order_quantity) FROM `oc_product_option_value` b WHERE b.product_id = p.product_id) as in_order_total, (SELECT b.order_quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=32) as in_order_s,(SELECT b.order_quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=31) as in_order_m,(SELECT b.order_quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=43) as in_order_l,(SELECT b.order_quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=49) as in_order_xl,(SELECT b.order_quantity FROM `oc_product_option_value` b WHERE b.product_id = p.product_id AND b.option_value_id=50) as in_order_xxl, (SELECT SUM( a.quantity ) FROM `oc_order_product` a JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id JOIN `oc_order` c ON b.order_id = c.order_id WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='S') as in_reserve_s,(SELECT SUM( a.quantity ) FROM `oc_order_product` a JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id JOIN `oc_order` c ON b.order_id = c.order_id WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='M') as in_reserve_m,(SELECT SUM( a.quantity ) FROM `oc_order_product` a JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id JOIN `oc_order` c ON b.order_id = c.order_id WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='L') as in_reserve_l,(SELECT SUM( a.quantity ) FROM `oc_order_product` a JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id JOIN `oc_order` c ON b.order_id = c.order_id WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='XL') as in_reserve_xl,(SELECT SUM( a.quantity ) FROM `oc_order_product` a JOIN `oc_order_option`  b ON a.order_product_id=b.order_product_id JOIN `oc_order` c ON b.order_id = c.order_id WHERE a.product_id=p.product_id AND c.order_status_id=15 AND b.value='XXL') as in_reserve_xxl,(SELECT SUM(op.quantity) FROM `oc_order_product` op, `oc_order` o WHERE op.product_id = p.product_id AND op.order_id = o.order_id AND o.order_status_id = 15) AS in_reserve_total,(SELECT SUM(op.quantity) FROM `oc_order_product` op, `oc_order` o WHERE op.product_id = p.product_id AND op.order_id = o.order_id AND o.order_status_id > 0) AS sold FROM `oc_product` p LEFT JOIN `oc_product_description` pd ON (p.product_id = pd.product_id) WHERE 1
+
+SELECT * FROM `oc_product_option_value` pov JOIN `oc_product` p ON p.product_id=pov.product_id JOIN `oc_order_product` op ON op.product_id=p.product_id JOIN `oc_product_description` pd ON pd.product_id=p.product_id JOIN `oc_order` o ON o.order_id=op.order_id JOIN `oc_order_option` oo ON oo.order_id=o.order_id
+
+
+// Queries for Shipment creations
+SELECT o.order_id, o.customer_id, o.firstname, o.lastname, o.email, o.telephone, o.payment_address_1, o.payment_city, o.payment_postcode, o.payment_country, o.payment_method, o.payment_code, o.total as order_total, op.order_product_id, op.model, oo.value as size, oo.product_option_value_id, o.order_status_id, op.quantity, op.price, op.total as product_total,o.date_added,o.date_modified FROM `oc_order` o JOIN `oc_order_option` oo ON o.order_id=oo.order_id JOIN `oc_order_product` op ON oo.order_product_id=op.order_product_id WHERE o.order_status_id=15 AND oo.product_option_value_id IN (SELECT pov.product_option_value_id FROM `oc_product_option_value` pov WHERE pov.quantity>0) ORDER BY o.order_id DESC
+
+SELECT COUNT(*) as order_product_count, o.order_id, SUM(p.packet_quantity) as total_packet_quantity FROM `oc_order` o JOIN `oc_order_option` oo ON o.order_id=oo.order_id JOIN `oc_order_product` op ON oo.order_product_id=op.order_product_id JOIN `oc_product` p ON op.product_id=p.product_id WHERE op.status_id=15 AND oo.product_option_value_id IN (SELECT pov.product_option_value_id FROM `oc_product_option_value` pov WHERE pov.quantity>0) GROUP BY o.order_id
+ORDER BY `o`.`order_id`  DESC
+
+
+
+SELECT * FROM (SELECT p.model, pd.design_desc, p.product_id,p.quantity as opencart_num
+FROM `oc_product` p
+INNER JOIN `oc_product_description` pd ON p.product_id = pd.product_id
+WHERE p.status =1 and p.product_id>=117) as prod_details 
+LEFT JOIN (SELECT o.order_id, o.payment_firstname,o.email,o.telephone,o.payment_city,op.product_id, SUM(op.quantity) as order_accepted_not_shipped
+FROM `oc_order` o
+INNER JOIN `oc_order_product` op
+ON o.order_id=op.order_id WHERE (o.order_status_id=15 or o.order_status_id=3 or o.order_status_id=18) AND DATE(o.date_added)>='2015-12-01' GROUP BY op.product_id) as req_details
+ON prod_details.product_id=req_details.product_id 
+ORDER BY `req_details`.`product_id`  DESC
+
+
+WHILE PLACING ORDER STOCK GETTING DECREASED. HOW FAR IT IS CORRECT TO USE STOCK WHILE SHOWING TO BE SHIPPED. CHECKING STOCK AND DISPLAYING THEM is Confusing. Example, if quantity is <0 every order wont be shown.
+Ideally the first orders should be catered.
+
+UPDATE `oc_product_option_value` SET quantity=quantity+order_quantity-50
+
+Query for product stats asked by krishna movie wise
+SELECT o.order_status_id, op.product_id, p.model, COUNT( * ),SUM(op.quantity),SUM(op.total) 
+FROM  `oc_order_product` op
+JOIN  `oc_order` o ON o.order_id = op.order_id
+JOIN  `oc_product` p ON op.product_id = p.product_id
+WHERE (o.order_status_id =21 or o.order_status_id=22 or o.order_status_id=23 or o.order_status_id=24 or o.order_status_id=27)
+AND op.product_id >=144
+GROUP BY op.product_id WITH ROLLUP
+
+
+SELECT all_descrip.product_id,all_descrip.model,all_descrip.design_desc,all_descrip.opencart_num, size_trans.SIZE, size_trans.SALE FROM (SELECT p.model, pd.design_desc, p.product_id,p.quantity as opencart_num
+FROM `oc_product` p
+INNER JOIN `oc_product_description` pd ON p.product_id = pd.product_id
+WHERE p.status =1) as all_descrip LEFT JOIN (SELECT a.model, a.product_id AS PRODUCT_ID, b.value AS SIZE, SUM( a.quantity ) AS SALE
+FROM oc_order_product a
+JOIN oc_order_option b ON a.order_product_id = b.order_product_id
+JOIN oc_order c ON b.order_id = c.order_id
+WHERE (c.order_status_id = 3 or c.order_status_id=4 or c.order_status_id=5 or c.order_status_id=18 or c.order_status_id=33)
+GROUP BY a.product_id, b.value
+WITH ROLLUP) as size_trans
+ON all_descrip.product_id=size_trans.PRODUCT_ID
+ORDER BY `all_descrip`.`model` ASC
+
+SELECT * FROM `vendor_shipment_items` where product_option_value_id='305' or product_option_value_id='306' or product_option_value_id='307' or product_option_value_id='308' or product_option_value_id='309' 
+
+SELECT * FROM `po_items` where product_title LIKE '%Black Button Down%'
+
+// Enabling Logging
+SET global log_output = 'FILE';
+SET global general_log_file='/var/log/mysql.log';
+SET global general_log = 1;
+
+
+SELECT o.order_id,o.payment_code,os.name,o.date_added,o.total,drf.STATUS,drf.statusd,f.statuscode FROM `oc_order` o JOIN `oc_detail_ref_id` drf ON o.order_id=drf.REFNO JOIN `oc_order_status` os ON o.order_status_id=os.order_status_id JOIN `oc_fedex` f ON f.order_id=o.order_id WHERE o.order_status_id>0 AND o.payment_code='cod' AND DATE(o.date_added)>='2016-01-01' AND DATE(o.date_added)<='2016-01-31'
+
+
+// Only COD and accepted
+SELECT o.order_id,o.payment_code,os.name,o.date_added,o.total FROM `oc_order` o JOIN `oc_order_status` os ON o.order_status_id=os.order_status_id WHERE o.order_status_id=15 AND o.payment_code='cod' AND DATE(o.date_added)>='2016-01-01' AND DATE(o.date_added)<='2016-01-31'
+
+SELECT * FROM `oc_order` o JOIN `oc_order_product` op ON o.order_id=op.order_id AND (o.order_status_id =3
+OR o.order_status_id =4
+OR o.order_status_id =5
+OR o.order_status_id =15
+OR o.order_status_id =17
+OR o.order_status_id =18
+OR o.order_status_id =26
+OR o.order_status_id =33) AND DATE(o.date_modified)<='2016-02-29' AND op.product_id BETWEEN 145 AND 154
+
+WHile updating returns from karthik excel sheet we updated only date-Modified no update in order_history
+
+SELECT o.order_id,o.date_added,o.date_modified,o.total FROM `oc_order` o JOIN `oc_order_history` oh ON o.order_id=oh.order_id WHERE (DATE(o.date_modified)>='2015-04-01' AND DATE(o.date_modified)<='2015-04-30' AND o.order_status_id=18)  OR (oh.order_status_id=18 AND DATE(oh.date_added)>='2015-04-01' AND DATE(oh.date_added)<='2015-04-30')
+
+// SOme orders have 3 as status and some are updated in feb to delivered.
+SELECT o.order_id,o.date_added,o.date_modified,oh.date_added,o.total,o.order_status_id,oh.order_status_id FROM `oc_order` o JOIN `oc_order_history` oh ON o.order_id=oh.order_id WHERE (DATE(o.date_modified)>='2015-04-01' AND DATE(o.date_modified)<='2015-04-30' AND (o.order_status_id=18 or o.order_status_id=3))  OR ((oh.order_status_id=18 or oh.order_status_id=3) AND DATE(oh.date_added)>='2015-04-01' AND DATE(oh.date_added)<='2015-04-30')
+
+SELECT * FROM `oc_product_option_value` WHERE product_id=116
+
+SELECT DISTINCT o.order_id,op.model,oo.value,o.order_status_id,op.quantity,o.date_modified FROM `oc_order` o JOIN `oc_order_product` op on o.order_id=op.order_id
+JOIN `oc_order_option` oo ON o.order_id = oo.order_id
+WHERE DATE(o.date_modified)>='2016-03-16' AND op.product_id=116 AND o.order_status_id>0 ORDER BY oo.value
+
+
+
+SELECT po_data.product_id,po_data.model,po_data.ordered_quantity, (po_data.ordered_quantity * po_data.price_assured) as value FROM `oc_product` fp JOIN (SELECT p.product_id as product_id,p.model as model,SUM(pi.quantity) as ordered_quantity,pi.price_assured as price_assured  FROM `po_items` pi JOIN `oc_product_option_value` pov on pi.product_option_value_id=pov.product_option_value_id JOIN `oc_product` p ON p.product_id=pov.product_id WHERE p.product_id IN (SELECT ptc.product_id FROM `oc_product_to_category` ptc WHERE ptc.category_id=106) GROUP BY p.product_id) as po_data ON po_data.product_id=fp.product_id
+
+SELECT os.name, count( * ) , sum( o.total ) AS order_total
+FROM `oc_order` o
+JOIN `oc_order_status` os ON o.order_status_id = os.order_status_id
+WHERE DATE( o.date_added ) >= '2015-04-01'
+AND o.order_status_id >0
+GROUP BY os.order_status_id
+
+SELECT COUNT( DISTINCT o.order_id ) , os.name
+FROM `oc_order` o
+JOIN `oc_order_history` oh ON o.order_id = oh.order_id
+JOIN `oc_order_status` os ON o.order_status_id = os.order_status_id
+WHERE oh.comment LIKE '%DOTZOT%'
+AND o.order_status_id >0
+AND DATE( o.date_added ) >= '2015-04-01'
+GROUP BY os.order_status_id
+
