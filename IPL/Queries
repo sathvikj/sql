@@ -1,0 +1,56 @@
+# What are the scores of Virat Kohli whenever RCB reached finals
+print season, name and Runs by Kohli
+
+SELECT m.season,d.batsman,sum(d.batsman_runs) as Runs from matches m
+join deliveries d on d.match_id = m.id
+where d.batsman like "%V kohli%" and m.id in (select max(id) from matches
+group by season)
+group by 1,2
+
+#Summarize the Winners and Runners by season
+
+# Contribution as pairs( Partnership ):
+
+create view pairs as (select batsman,non_striker,batting_team, sum(batsman_runs) as runs from deliveries
+group by 1,2,3);
+
+select p1.batsman,p1.non_striker,p1.batting_team,p1.runs+p2.runs as runs  from pairs p1
+join pairs p2 on p1.batsman = p2.non_striker and p1.non_striker = p2.batsman
+where p1.batsman<p2.batsman
+group by 1,2
+order by 4 desc;
+
+drop view pairs;
+
+##Summarize a few stats that are like in the link below:
+https://www.firstpost.com/firstcricket/sports-news/ipl-2018-stats-preview-from-ms-dhonis-varied-feats-to-chris-gayles-batting-milestones-4420865.html
+#Most Runs in IPL
+
+select 	Player,matches,Runs,Hs,ifnull(round(summary.Runs/summary.dismissals,2),0) as `Ave.`,
+		SR, concat(half_centuries,"/",centuries) as `50s/100s` from 
+(select de.batsman as Player,count(distinct(de.match_id)) as matches, 
+       sum(de.batsman_runs) as Runs, hs.hs as Hs, 
+       ifnull(notout.dismissals,0) as dismissals,sr.strike_rate as SR,
+       ifnull(cen.cent,0) as centuries, ifnull(hc.half,0) as half_centuries from deliveries de
+left join (select test.batsman, max(test.hs) as hs from    ## Highest Score
+		  (select batsman,sum(batsman_runs) as hs from deliveries
+			group by match_id,batsman) test
+			group by 1 
+			order by 2 desc) hs on hs.batsman = de.batsman
+left join (select batsman, count(*) as cent from (select batsman from deliveries   ## Centuries 
+			group by match_id,batsman
+			having sum(batsman_runs) >= 100) c
+			group by 1) cen on cen.batsman = de.batsman 
+left join (select batsman, count(*) as half from (select batsman from deliveries  ##Half Centuries
+			group by match_id,batsman
+			having sum(batsman_runs) >= 50 and sum(batsman_runs) < 100) temp
+			group by 1) hc on hc.batsman = de.batsman
+left join (select batsman, round((sum(batsman_runs)/count(batsman_runs))*100,2) as strike_rate from deliveries
+			where wide_runs = 0 and noball_runs = 0 and penalty_runs = 0 ##Strike Rate
+			group by 1) sr on sr.batsman = de.batsman 
+left join (select player_dismissed, count(*) as dismissals from deliveries 
+			where player_dismissed is not null
+			group by 1) notout on notout.player_dismissed = de.batsman            
+group by 1) summary
+order by 3 desc;
+
