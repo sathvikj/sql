@@ -1,5 +1,10 @@
 # SQL Queries
 
+# Classic Models
+   These are the practice questions that I did when learning sql for the first time. Solutions doesn't include functions and stored    
+   procedures
+   File Classicmodelsdb.sql is the database
+   File Classicmodels is a .txt file and has solutions
 # About HackerRank
   Solution to all the hackerrank challenges only listed the queries with the difficulty level medium & hard and ignored the easy one's
 # Q&A 
