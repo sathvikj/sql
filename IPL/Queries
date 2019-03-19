@@ -54,3 +54,48 @@ left join (select player_dismissed, count(*) as dismissals from deliveries
 group by 1) summary
 order by 3 desc;
 
+# Which batsman contributed highest in their final appearance
+
+select m.season,d.innings, d.batsman,d.batting_team, sum(batsman_runs) as runs from matches m
+join deliveries d on m.id = d.match_id
+where d.match_id in (select max(id) from matches group by season)
+group by 1,2,3,4
+order by 1 desc, 2 asc, 5 desc
+
+# scores of Koli in each season, include a column in increase or decrease
+
+create view kohli as 
+(select m.season,d.batsman,sum(d.batsman_runs) as runs from deliveries d
+join matches m on m.id = d.match_id
+where d.batsman  = "V Kohli"
+group by 1
+order by 1 desc);
+
+select k2.*,(k2.runs - k1.runs) as '+/- previous' from kohli k1
+right join kohli k2 on k1.season = k2.season - 1
+order by 1.4 desc
+
+# Cumulative scores of Kohli
+
+create view kohli as 
+(select m.season,d.batsman,sum(d.batsman_runs) as runs from deliveries d
+join matches m on m.id = d.match_id
+where d.batsman  = "V Kohli"
+group by 1
+order by 1 desc);
+
+select k2.season,sum(k1.runs) as 'cum runs' from kohli k1
+right join kohli k2 on k1.season <= k2.season
+group by 1
+order by 1 asc;
+
+drop view kohli
+
+-- Other Questions
+# Players who scored more than 40 runs in consecutive innings
+# Players who started the innings and remained not out
+# Players who took more than 3 wickets in consecutive innings
+# Players who achieved a hat-trick
+# Summarize partnerships for players
+# Summarize list of players appreared by season by team
+
