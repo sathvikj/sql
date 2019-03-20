@@ -11,16 +11,12 @@ group by 1,2
 
 # Contribution as pairs( Partnership ):
 
-create view pairs as (select batsman,non_striker,batting_team, sum(batsman_runs) as runs from deliveries
-group by 1,2,3);
-
-select p1.batsman,p1.non_striker,p1.batting_team,p1.runs+p2.runs as runs  from pairs p1
-join pairs p2 on p1.batsman = p2.non_striker and p1.non_striker = p2.batsman
-where p1.batsman<p2.batsman
-group by 1,2
-order by 4 desc;
-
-drop view pairs;
+select concat(t1.batsman, " - ",t1.non_striker) as 'batsman', t1.runs + t2.runs as 'partnership' from 
+(select batsman,non_striker,sum(total_runs) as runs from deliveries group by 1,2) t1
+join (select batsman,non_striker,sum(total_runs) as runs from deliveries group by 1,2) t2 
+on t1.non_striker = t2.batsman and t1.batsman = t2.non_striker
+where t1.batsman > t2.batsman
+order by 2 desc
 
 ##Summarize a few stats that are like in the link below:
 https://www.firstpost.com/firstcricket/sports-news/ipl-2018-stats-preview-from-ms-dhonis-varied-feats-to-chris-gayles-batting-milestones-4420865.html
@@ -109,6 +105,5 @@ group by 1
 
 # Players who took more than 3 wickets in consecutive innings
 # Players who achieved a hat-trick
-# Summarize partnerships for players
 # Summarize list of players appreared by season by team
 
