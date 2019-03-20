@@ -91,9 +91,22 @@ order by 1 asc;
 
 drop view kohli
 
--- Other Questions
+
 # Players who scored more than 40 runs in consecutive innings
+
+select y.batsman,count(1) as 'count' from 
+	(select x.batsman, x.runs as a,ifnull(lead(x.runs) over(partition by x.batsman),0) as b from 
+			(select match_id,batsman,sum(batsman_runs) as 'runs' from deliveries
+			 group by 1,2
+			 order by 2,1
+             )x
+	)y
+where y.a >= 40 and y.b >= 40
+group by 1
+
 # Players who started the innings and remained not out
+
+
 # Players who took more than 3 wickets in consecutive innings
 # Players who achieved a hat-trick
 # Summarize partnerships for players
