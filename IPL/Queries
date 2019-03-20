@@ -102,6 +102,36 @@ group by 1
 
 # Players who started the innings and remained not out
 
+select x1.batsman, (x1.appearances-x2.dismissals) as 'times stayed till last after opening' from
+
+(select t1.batsman,count(1) as 'appearances' from (
+				select batsman,match_id from deliveries where deliveries.over = 1 and deliveries.ball = 1
+				union
+				select non_striker as batsman,match_id from deliveries where deliveries.over = 1 and deliveries.ball = 1
+				order by 1) t1
+group by 1 order by 2 desc
+) x1
+
+join
+
+(select t1.batsman,count(1) as 'dismissals' from (
+					select match_id,innings,batsman from deliveries where deliveries.over = 1 and deliveries.ball = 1
+					union
+					select match_id,innings,non_striker as batsman from deliveries where deliveries.over = 1 and deliveries.ball = 1
+					order by 1,2) t1 
+join 
+(select distinct(match_id),innings,player_dismissed from deliveries) t2 
+on t1.match_id = t2.match_id and t1.innings = t2.innings
+where t1.batsman = t2.player_dismissed
+group by 1
+order by 2) x2
+
+on x1.batsman = x2.batsman
+where x1.appearances > x2.dismissals
+order by 2 desc
+
+
+
 
 # Players who took more than 3 wickets in consecutive innings
 # Players who achieved a hat-trick
