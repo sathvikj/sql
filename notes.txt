@@ -1,0 +1,121 @@
+#### Constraints ####
+	NOT NULL - Ensures that a column cannot have a NULL value
+	
+	UNIQUE - Ensures that all values in a column are different
+	
+	PRIMARY KEY - A combination of a NOT NULL and UNIQUE. Uniquely identifies each row in a table
+	
+	FOREIGN KEY - Uniquely identifies a row/record in another table
+	
+	CHECK - Ensures that all values in a column satisfies a specific condition
+	
+	DEFAULT - Sets a default value for a column when no value is specified
+	
+	INDEX - Used to create and retrieve data from the database very quickly
+
+1) Indexing - Constraint
+   creating index reduced the filtering time at an additional cost of memory storege
+   - Create indexes for ccolumn(s) so that when you pass where statement the query only
+	 searches for the rows with that index
+	 eg) - Dictionary
+ 
+2)  Default - Constraint
+	Passing the default constraint ensures to enter a default value when
+	no other value is passes for that record
+	
+3)  Check - Constraint
+    used to check before inserting data into table
+    for  eg, people with age < 18 cannot be inserted into the record
+   
+4)  NOTNULL, UNIQUE - Constraints for Primary Key (also a constraint) 
+
+5)  AutoIncrement - A constraint that can be imposed on primary key to maintain unique and notnull
+
+6)  Timestamp - YYYY:MM:DD HH:MM:SS
+
+7) 	View - A temporary table (Query is executed everytime you use it - so up to date data)
+		 - Can reduce the complexity in writing a query
+		 - Can give permissions to the views. If you dont want certain employees not to watch certain columns( like credit card numbers)
+		 - Takes longer time to run that running on table
+		
+8) 	Drop - Remove table completely
+
+9) 	Truncate - Just remove the data from table
+
+10) Alter - Change the table properties like
+				- Change data type
+				- Add columns
+				- Remove Columns
+				
+    UPDATE - Used to update the internal records in table 	
+					
+11) Query Structure and Execution Order:
+
+	SELECT DISTINCT column, AGG_FUNC(column_or_expression), …
+	FROM mytable
+		JOIN another_table
+		  ON mytable.column = another_table.column
+		WHERE constraint_expression
+		GROUP BY column
+		HAVING constraint_expression
+		ORDER BY column ASC/DESC
+		LIMIT count OFFSET COUNT;
+		
+		FROM
+		JOIN
+		WHERE
+		GROUP BY
+		HAVING
+		SELECT
+		DISTINCT
+		ORDER
+		LIMIT
+		
+12) LIMIT and OFFSET
+	 LIMIT 10
+	 LIMIT 5,10   ===   Returns 10 rows after row 5
+	 LIMIT 5, OFFSET 10 === Returns 5 rows after row 10
+	 limit 10 offset 5 and limit 5, 10, both of them return 10 rows, starting from row 6.
+	 
+13) UNION - Returns Unique values from each table
+	UNION ALL - Returns duplicate values too
+	
+14) ### Window Functions ###
+
+	ROW_NUMBER = Just returns the row_number
+	RANK = 		 100,100,100,99,99,98,97,96 ====> 1,1,1,4,4,6,7,8    == EAMCET Ranks       
+	DENSE_RANK = 100,100,100,99,99,98,97,96 ====> 1,1,1,2,2,3,4,5    == Class Ranks 
+	
+	SUM(X) COUNT(X) over (partition by A)  				To find sum,count for a partition and display it.
+	SUM(X) COUNT(X) over (partition by A order by B) 	To find running sum, count for a partition and display it.
+	SUM(X) COUNT(X) over (order by B) 					To find running sum,count without any partition
+	
+	LAG(X,2) LEAD(X,2) over(Partition by A order by B)
+	RANK(),DENSE_RANK(),ROW_NUMBER() over(Partition by A order by B)
+	
+15) Inner Join = Join
+	Left Join = Left Outer Join
+	Right Join = Right Outer Join
+	Full Join = Full Outer Join
+	Cross Join = Cartesian Product
+	
+	# Find A that are not in B
+		left join where b.column is null
+	# Find B that are not in AGG_FUNC
+		right join where A.column is null
+	
+16) Coalesce and IFNULL
+	IFNULL(B,0)     - Takes only one single column when applying function
+	COALESCE:
+		SELECT COALESCE(NULL, NULL, 'third_value', 'fourth_value') returns the third value because the third value is the first value that isn't null.
+		
+	Example: 
+		If the transactions are recorded by month for users and you want to know the first transaction made by the customer, use coalesce.
+		
+17) 
+		
+
+	
+	
+
+				
