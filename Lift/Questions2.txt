@@ -1,0 +1,9 @@
+A) What are average sales for a customer's first transaction, second transaction, and third or more transaction?
+
+B) What % of total sales do the top 5 selling stores account for?
+
+C) Which month had the most sales?
+
+D) What % of customers shopped in 2 different months or more?
+
+E) For customers that shopped more than once and spent between $500 and $1000 on their first purchase, what is the average spend for the second purchase?

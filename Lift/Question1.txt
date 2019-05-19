@@ -1,0 +1,11 @@
+A) What % of sales result in a return?
+
+B) What % of returns are full returns?
+
+C) What is the average return % amount (return % of original sale)?
+
+D) What % of returns occur within 7 days of the original sale?
+
+E) What is the average number of days for a return to occur?
+
+F) Using this data set, how would you approach and answer the question, who is our most valuable customer?
